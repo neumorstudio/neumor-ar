@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NeumorStudio AR Experience</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-logo {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #f4a261;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .instructions {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+        }
+
+        .instructions.hidden {
+            display: none;
+        }
+
+        .brand-watermark {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 15px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-watermark img {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+        }
+
+        .brand-watermark span {
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.playing {
+            background: #f4a261;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <img src="assets/logoneumor.jpeg" alt="NeumorStudio" class="loading-logo">
+        <div class="loading-text">Iniciando c&aacute;mara AR...</div>
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Brand Watermark -->
+    <div class="brand-watermark">
+        <img src="assets/logoneumor.jpeg" alt="NS">
+        <span>NeumorStudio AR</span>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions" id="instructions">
+        Apunta la c&aacute;mara al marcador de la tarjeta
+    </div>
+
+    <!-- Video Controls -->
+    <div class="controls" id="controls" style="display: none;">
+        <button class="control-btn" id="playPauseBtn" onclick="toggleVideo()">
+            &#9658;
+        </button>
+        <button class="control-btn" id="restartBtn" onclick="restartVideo()">
+            &#8635;
+        </button>
+    </div>
+
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; antialias: true"
+        id="arScene"
+    >
+        <!-- Assets -->
+        <a-assets>
+            <video
+                id="neumorVideo"
+                src="assets/videointro.mp4"
+                preload="auto"
+                loop="false"
+                crossorigin="anonymous"
+                playsinline
+                webkit-playsinline
+            ></video>
+        </a-assets>
+
+        <!-- Marcador Hiro (predefinido) - Cambiar a custom para produccion -->
+        <a-marker preset="hiro" id="marker">
+            <!-- Video plane -->
+            <a-video
+                src="#neumorVideo"
+                position="0 0.5 0"
+                rotation="-90 0 0"
+                width="1.6"
+                height="0.9"
+                id="videoPlane"
+            ></a-video>
+
+            <!-- Logo 3D flotante encima del video -->
+            <a-image
+                src="assets/logoneumor.jpeg"
+                position="0 1.2 0"
+                rotation="-90 0 0"
+                width="0.4"
+                height="0.4"
+                id="floatingLogo"
+            ></a-image>
+
+            <!-- Texto de marca -->
+            <a-text
+                value="NeumorStudio"
+                position="0 0.05 0.6"
+                rotation="-90 0 0"
+                color="#f4a261"
+                align="center"
+                width="2"
+                font="roboto"
+            ></a-text>
+
+            <!-- Botones de redes (iconos simples) -->
+            <a-plane position="-0.6 0.05 -0.5" rotation="-90 0 0" width="0.2" height="0.2" color="#E1306C" class="social-btn" data-url="https://www.instagram.com/neumorstudio/"></a-plane>
+            <a-plane position="-0.3 0.05 -0.5" rotation="-90 0 0" width="0.2" height="0.2" color="#1877F2" class="social-btn" data-url="https://www.facebook.com/people/Neumor-Studio/61585602088554/"></a-plane>
+            <a-plane position="0 0.05 -0.5" rotation="-90 0 0" width="0.2" height="0.2" color="#000000" class="social-btn" data-url="https://www.tiktok.com/@neumorstudio"></a-plane>
+            <a-plane position="0.3 0.05 -0.5" rotation="-90 0 0" width="0.2" height="0.2" color="#FF0000" class="social-btn" data-url="https://www.youtube.com/channel/UC1uXNNllln0RYC871Z_rruQ"></a-plane>
+            <a-plane position="0.6 0.05 -0.5" rotation="-90 0 0" width="0.2" height="0.2" color="#1DA1F2" class="social-btn" data-url="https://x.com/neumorstudio"></a-plane>
+
+            <!-- Animacion del logo -->
+            <a-animation
+                attribute="position"
+                from="0 1.2 0"
+                to="0 1.4 0"
+                direction="alternate"
+                dur="2000"
+                repeat="indefinite"
+                easing="ease-in-out"
+            ></a-animation>
+        </a-marker>
+
+        <!-- Camera -->
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        const video = document.getElementById('neumorVideo');
+        const marker = document.getElementById('marker');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const instructions = document.getElementById('instructions');
+        const controls = document.getElementById('controls');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+
+        let isPlaying = false;
+        let markerVisible = false;
+
+        // Hide loading when scene is ready
+        document.getElementById('arScene').addEventListener('loaded', function() {
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+            }, 1500);
+        });
+
+        // Marker found
+        marker.addEventListener('markerFound', function() {
+            markerVisible = true;
+            instructions.textContent = 'Marcador detectado - Reproduciendo video';
+            controls.style.display = 'flex';
+
+            // Auto-play video when marker is found
+            video.play().then(() => {
+                isPlaying = true;
+                updatePlayButton();
+            }).catch(err => {
+                console.log('Auto-play blocked:', err);
+                instructions.textContent = 'Toca el bot\u00f3n play para iniciar';
+            });
+        });
+
+        // Marker lost
+        marker.addEventListener('markerLost', function() {
+            markerVisible = false;
+            instructions.textContent = 'Apunta la c\u00e1mara al marcador de la tarjeta';
+            video.pause();
+            isPlaying = false;
+            updatePlayButton();
+            controls.style.display = 'none';
+        });
+
+        function toggleVideo() {
+            if (isPlaying) {
+                video.pause();
+                isPlaying = false;
+            } else {
+                video.play();
+                isPlaying = true;
+            }
+            updatePlayButton();
+        }
+
+        function restartVideo() {
+            video.currentTime = 0;
+            video.play();
+            isPlaying = true;
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            if (isPlaying) {
+                playPauseBtn.innerHTML = '&#10074;&#10074;';
+                playPauseBtn.classList.add('playing');
+            } else {
+                playPauseBtn.innerHTML = '&#9658;';
+                playPauseBtn.classList.remove('playing');
+            }
+        }
+
+        // Video ended
+        video.addEventListener('ended', function() {
+            isPlaying = false;
+            updatePlayButton();
+            instructions.textContent = 'Video terminado - Toca restart para repetir';
+        });
+
+        // Handle social button clicks (for future enhancement)
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
