@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NeumorStudio AR Experience Pro</title>
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- AR.js con NFT support -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <!-- A-Frame Extras para animaciones -->
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(244, 162, 97, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .loading-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .loading-subtitle {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+
+        .loading-progress {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #f4a261, #e76f51);
+            border-radius: 2px;
+            animation: loading 2s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; margin-left: 0; }
+            50% { width: 70%; margin-left: 15%; }
+            100% { width: 0%; margin-left: 100%; }
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .brand-text {
+            color: white;
+        }
+
+        .brand-name {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .brand-tag {
+            font-size: 0.65rem;
+            color: #f4a261;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4444;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        .status-dot.active {
+            background: #44ff44;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            color: white;
+            font-size: 0.75rem;
+        }
+
+        /* Instructions Panel */
+        .instructions-panel {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(20px);
+            padding: 20px 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 1000;
+            max-width: 90%;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.5s ease;
+        }
+
+        .instructions-panel.minimized {
+            padding: 12px 20px;
+            bottom: 30px;
+        }
+
+        .instructions-panel h3 {
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .instructions-panel p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+        }
+
+        .instructions-panel .icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .controls.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            font-size: 1.3rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.primary {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(145deg, #f4a261, #e76f51);
+            color: white;
+        }
+
+        .control-btn.playing {
+            background: linear-gradient(145deg, #e76f51, #d45a47);
+        }
+
+        /* Social Links Overlay */
+        .social-overlay {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+        }
+
+        .social-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .social-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .social-btn:hover {
+            transform: translateX(-5px) scale(1.1);
+        }
+
+        .social-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .social-btn.instagram { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+        .social-btn.facebook { background: #1877F2; }
+        .social-btn.tiktok { background: #000; }
+        .social-btn.youtube { background: #FF0000; }
+        .social-btn.twitter { background: #000; }
+
+        /* Scan Animation */
+        .scan-line {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 2px solid rgba(244, 162, 97, 0.5);
+            border-radius: 20px;
+            z-index: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .scan-line.visible {
+            opacity: 1;
+        }
+
+        .scan-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #f4a261, transparent);
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        .scan-corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-color: #f4a261;
+            border-style: solid;
+        }
+
+        .scan-corner.tl { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 10px 0 0 0; }
+        .scan-corner.tr { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 10px 0 0; }
+        .scan-corner.bl { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 10px; }
+        .scan-corner.br { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 10px 0; }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <img src="assets/logoneumor.jpeg" alt="NeumorStudio" class="loading-logo">
+        <div class="loading-title">NeumorStudio</div>
+        <div class="loading-subtitle">Iniciando experiencia AR...</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="brand">
+            <img src="assets/logoneumor.jpeg" alt="NS">
+            <div class="brand-text">
+                <div class="brand-name">NeumorStudio</div>
+                <div class="brand-tag">Experiencia AR</div>
+            </div>
+        </div>
+        <div class="status-indicator">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">Buscando...</span>
+        </div>
+    </div>
+
+    <!-- Scan Guide -->
+    <div class="scan-line" id="scanLine">
+        <div class="scan-corner tl"></div>
+        <div class="scan-corner tr"></div>
+        <div class="scan-corner bl"></div>
+        <div class="scan-corner br"></div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions-panel" id="instructions">
+        <div class="icon">📱</div>
+        <h3>Apunta a la tarjeta</h3>
+        <p>Enfoca la c&aacute;mara hacia el marcador NeumorStudio</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls" id="controls">
+        <button class="control-btn" onclick="restartVideo()" title="Reiniciar">
+            ↺
+        </button>
+        <button class="control-btn primary" id="playPauseBtn" onclick="toggleVideo()">
+            ▶
+        </button>
+        <button class="control-btn" onclick="toggleMute()" id="muteBtn" title="Sonido">
+            🔊
+        </button>
+    </div>
+
+    <!-- Social Links -->
+    <div class="social-overlay" id="socialOverlay">
+        <a href="https://www.instagram.com/neumorstudio/" target="_blank" class="social-btn instagram" title="Instagram">
+            <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+        </a>
+        <a href="https://www.facebook.com/people/Neumor-Studio/61585602088554/" target="_blank" class="social-btn facebook" title="Facebook">
+            <svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+        <a href="https://www.tiktok.com/@neumorstudio" target="_blank" class="social-btn tiktok" title="TikTok">
+            <svg viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+        </a>
+        <a href="https://www.youtube.com/channel/UC1uXNNllln0RYC871Z_rruQ" target="_blank" class="social-btn youtube" title="YouTube">
+            <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+        <a href="https://x.com/neumorstudio" target="_blank" class="social-btn twitter" title="X">
+            <svg viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+    </div>
+
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true; antialias: true; alpha: true"
+        loading-screen="enabled: false"
+        id="arScene"
+    >
+        <a-assets>
+            <video
+                id="arVideo"
+                src="assets/videointro.mp4"
+                preload="auto"
+                loop="false"
+                playsinline
+                webkit-playsinline
+                crossorigin="anonymous"
+            ></video>
+            <img id="logoImg" src="assets/logoneumor.jpeg">
+        </a-assets>
+
+        <!-- Marcador Hiro (temporal - cambiar a NFT después) -->
+        <a-marker preset="hiro" id="arMarker" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+
+            <!-- Contenedor principal con animación de entrada -->
+            <a-entity id="mainContainer" position="0 0 0" scale="0 0 0">
+
+                <!-- ===== VIDEO ===== -->
+                <a-entity id="videoContainer" position="0 0.6 0">
+                    <!-- Marco del video con efecto neumórfico -->
+                    <a-plane
+                        position="0 0 -0.02"
+                        rotation="-90 0 0"
+                        width="1.8"
+                        height="1.1"
+                        color="#e0e5ec"
+                        material="shader: flat"
+                    ></a-plane>
+
+                    <!-- Video -->
+                    <a-video
+                        src="#arVideo"
+                        position="0 0 0"
+                        rotation="-90 0 0"
+                        width="1.7"
+                        height="0.96"
+                    ></a-video>
+                </a-entity>
+
+                <!-- ===== LOGO FLOTANTE ===== -->
+                <a-entity id="logoContainer" position="-1.1 0.3 0">
+                    <!-- Base circular con sombra -->
+                    <a-circle
+                        position="0 0 -0.01"
+                        rotation="-90 0 0"
+                        radius="0.22"
+                        color="#d0d5dc"
+                        material="shader: flat"
+                    ></a-circle>
+
+                    <!-- Logo -->
+                    <a-image
+                        src="#logoImg"
+                        position="0 0.001 0"
+                        rotation="-90 0 0"
+                        width="0.35"
+                        height="0.35"
+                        animation="property: position; from: 0 0.001 0; to: 0 0.08 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate"
+                    ></a-image>
+                </a-entity>
+
+                <!-- ===== TEXTO MARCA ===== -->
+                <a-entity id="textContainer" position="0 0.05 0.6">
+                    <a-text
+                        value="NEUMORSTUDIO"
+                        position="0 0 0"
+                        rotation="-90 0 0"
+                        color="#2d3748"
+                        align="center"
+                        width="2.5"
+                        font="roboto"
+                        anchor="center"
+                    ></a-text>
+                    <a-text
+                        value="Diseno Digital Premium"
+                        position="0 0 -0.15"
+                        rotation="-90 0 0"
+                        color="#718096"
+                        align="center"
+                        width="1.5"
+                        font="roboto"
+                        anchor="center"
+                    ></a-text>
+                </a-entity>
+
+                <!-- ===== LINEA DECORATIVA ===== -->
+                <a-plane
+                    position="0 0.01 0.35"
+                    rotation="-90 0 0"
+                    width="0.8"
+                    height="0.02"
+                    color="#f4a261"
+                    material="shader: flat"
+                ></a-plane>
+
+                <!-- ===== ICONOS REDES (3D Style) ===== -->
+                <a-entity id="socialIcons" position="0 0.02 -0.4">
+                    <!-- Instagram -->
+                    <a-entity class="social-3d" position="-0.5 0 0">
+                        <a-box
+                            position="0 0 0"
+                            rotation="-90 0 0"
+                            width="0.15"
+                            height="0.15"
+                            depth="0.04"
+                            color="#E1306C"
+                            animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 8000; loop: true; easing: linear"
+                        ></a-box>
+                    </a-entity>
+
+                    <!-- Facebook -->
+                    <a-entity class="social-3d" position="-0.25 0 0">
+                        <a-box
+                            position="0 0 0"
+                            rotation="-90 0 0"
+                            width="0.15"
+                            height="0.15"
+                            depth="0.04"
+                            color="#1877F2"
+                            animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 9000; loop: true; easing: linear"
+                        ></a-box>
+                    </a-entity>
+
+                    <!-- TikTok -->
+                    <a-entity class="social-3d" position="0 0 0">
+                        <a-box
+                            position="0 0 0"
+                            rotation="-90 0 0"
+                            width="0.15"
+                            height="0.15"
+                            depth="0.04"
+                            color="#010101"
+                            animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 7000; loop: true; easing: linear"
+                        ></a-box>
+                    </a-entity>
+
+                    <!-- YouTube -->
+                    <a-entity class="social-3d" position="0.25 0 0">
+                        <a-box
+                            position="0 0 0"
+                            rotation="-90 0 0"
+                            width="0.15"
+                            height="0.15"
+                            depth="0.04"
+                            color="#FF0000"
+                            animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 10000; loop: true; easing: linear"
+                        ></a-box>
+                    </a-entity>
+
+                    <!-- X/Twitter -->
+                    <a-entity class="social-3d" position="0.5 0 0">
+                        <a-box
+                            position="0 0 0"
+                            rotation="-90 0 0"
+                            width="0.15"
+                            height="0.15"
+                            depth="0.04"
+                            color="#14171A"
+                            animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 11000; loop: true; easing: linear"
+                        ></a-box>
+                    </a-entity>
+                </a-entity>
+
+            </a-entity>
+        </a-marker>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // Elements
+        const video = document.getElementById('arVideo');
+        const marker = document.getElementById('arMarker');
+        const mainContainer = document.getElementById('mainContainer');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const instructions = document.getElementById('instructions');
+        const controls = document.getElementById('controls');
+        const socialOverlay = document.getElementById('socialOverlay');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const scanLine = document.getElementById('scanLine');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+
+        let isPlaying = false;
+        let isMuted = false;
+        let markerFound = false;
+
+        // Hide loading screen
+        document.getElementById('arScene').addEventListener('loaded', () => {
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                scanLine.classList.add('visible');
+            }, 2000);
+        });
+
+        // Marker found
+        marker.addEventListener('markerFound', () => {
+            markerFound = true;
+
+            // Update status
+            statusDot.classList.add('active');
+            statusText.textContent = 'Detectado';
+
+            // Hide scan line
+            scanLine.classList.remove('visible');
+
+            // Animate container entrance
+            mainContainer.setAttribute('animation', {
+                property: 'scale',
+                from: '0 0 0',
+                to: '1 1 1',
+                dur: 800,
+                easing: 'easeOutElastic'
+            });
+
+            // Update instructions
+            instructions.innerHTML = '<h3>¡Tarjeta detectada!</h3><p>Disfruta la experiencia AR</p>';
+            instructions.classList.add('minimized');
+
+            // Show controls and social
+            setTimeout(() => {
+                controls.classList.add('visible');
+                socialOverlay.classList.add('visible');
+            }, 500);
+
+            // Auto-play video
+            video.play().then(() => {
+                isPlaying = true;
+                updatePlayButton();
+            }).catch(err => {
+                console.log('Autoplay blocked:', err);
+            });
+        });
+
+        // Marker lost
+        marker.addEventListener('markerLost', () => {
+            markerFound = false;
+
+            // Update status
+            statusDot.classList.remove('active');
+            statusText.textContent = 'Buscando...';
+
+            // Show scan line
+            scanLine.classList.add('visible');
+
+            // Animate container exit
+            mainContainer.setAttribute('animation', {
+                property: 'scale',
+                to: '0 0 0',
+                dur: 300,
+                easing: 'easeInQuad'
+            });
+
+            // Update instructions
+            instructions.innerHTML = '<div class="icon">📱</div><h3>Apunta a la tarjeta</h3><p>Enfoca la cámara hacia el marcador NeumorStudio</p>';
+            instructions.classList.remove('minimized');
+
+            // Hide controls and social
+            controls.classList.remove('visible');
+            socialOverlay.classList.remove('visible');
+
+            // Pause video
+            video.pause();
+            isPlaying = false;
+            updatePlayButton();
+        });
+
+        // Video controls
+        function toggleVideo() {
+            if (isPlaying) {
+                video.pause();
+                isPlaying = false;
+            } else {
+                video.play();
+                isPlaying = true;
+            }
+            updatePlayButton();
+        }
+
+        function restartVideo() {
+            video.currentTime = 0;
+            video.play();
+            isPlaying = true;
+            updatePlayButton();
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            video.muted = isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        }
+
+        function updatePlayButton() {
+            playPauseBtn.textContent = isPlaying ? '⏸' : '▶';
+            playPauseBtn.classList.toggle('playing', isPlaying);
+        }
+
+        // Video ended
+        video.addEventListener('ended', () => {
+            isPlaying = false;
+            updatePlayButton();
+        });
+    </script>
+</body>
+</html>
