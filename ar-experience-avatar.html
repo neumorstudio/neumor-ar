@@ -433,7 +433,7 @@
         <div class="scan-icon">
             <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
         </div>
-        <p>Apunta al marcador NeumorStudio</p>
+        <p>Apunta al marcador Hiro</p>
     </div>
 
     <!-- Status Bar -->
@@ -522,7 +522,7 @@
     <!-- A-Frame AR Scene -->
     <a-scene
         vr-mode-ui="enabled: false"
-        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+        arjs="sourceType: webcam; debugUIEnabled: false;"
         renderer="antialias: true; alpha: true; precision: medium;"
         embedded
     >
@@ -530,21 +530,20 @@
             <a-asset-item id="avatarModel" src="assets/avatar/avatar.glb"></a-asset-item>
         </a-assets>
 
-        <!-- NFT Marker -->
-        <a-nft
-            type="nft"
-            url="nft-marker/neumorstudio-marker"
+        <!-- Hiro Marker -->
+        <a-marker
+            preset="hiro"
             smooth="true"
             smoothCount="10"
             smoothTolerance="0.01"
             smoothThreshold="5"
-            id="nftMarker"
+            id="hiroMarker"
         >
             <!-- Avatar 3D -->
             <a-entity
                 id="avatarEntity"
                 gltf-model="#avatarModel"
-                scale="50 50 50"
+                scale="0.5 0.5 0.5"
                 position="0 0 0"
                 rotation="0 0 0"
                 animation-mixer="clip: *; loop: repeat"
@@ -552,7 +551,7 @@
             ></a-entity>
 
             <!-- Fallback: Animated Character Placeholder -->
-            <a-entity id="avatarPlaceholder" visible="true">
+            <a-entity id="avatarPlaceholder" visible="true" scale="0.01 0.01 0.01">
                 <!-- Body -->
                 <a-cylinder
                     position="0 80 0"
@@ -635,14 +634,14 @@
             <!-- Logo floating -->
             <a-image
                 src="assets/logoneumor.jpeg"
-                width="40"
-                height="40"
-                position="80 150 0"
+                width="0.4"
+                height="0.4"
+                position="0.8 1.5 0"
                 rotation="0 0 0"
                 animation="property: rotation; to: 0 360 0; dur: 8000; easing: linear; loop: true"
             ></a-image>
 
-        </a-nft>
+        </a-marker>
 
         <a-entity camera></a-entity>
     </a-scene>
@@ -679,10 +678,10 @@
             }, 2500);
         });
 
-        // NFT Marker events
-        const nftMarker = document.getElementById('nftMarker');
+        // Hiro Marker events
+        const hiroMarker = document.getElementById('hiroMarker');
 
-        nftMarker.addEventListener('markerFound', () => {
+        hiroMarker.addEventListener('markerFound', () => {
             isMarkerFound = true;
             statusDot.classList.add('active');
             statusText.textContent = 'Avatar encontrado';
@@ -694,7 +693,7 @@
             }, 1000);
         });
 
-        nftMarker.addEventListener('markerLost', () => {
+        hiroMarker.addEventListener('markerLost', () => {
             isMarkerFound = false;
             statusDot.classList.remove('active');
             statusText.textContent = 'Buscando marcador...';
