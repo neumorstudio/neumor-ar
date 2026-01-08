@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NeumorStudio AR - Avatar 3D</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-avatar {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #f4a261, #e76f51);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+
+        .loading-avatar svg {
+            width: 60px;
+            height: 60px;
+            fill: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(244, 162, 97, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(244, 162, 97, 0); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #f4a261, #e76f51);
+            width: 0%;
+            animation: loading 2s ease-in-out forwards;
+        }
+
+        @keyframes loading {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
+
+        /* UI Overlay */
+        .ui-overlay {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .logo-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo-badge img {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+        }
+
+        .logo-badge span {
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .close-btn {
+            width: 40px;
+            height: 40px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            pointer-events: auto;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Status */
+        .status-bar {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 12px 25px;
+            border-radius: 25px;
+            color: white;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #f4a261;
+            border-radius: 50%;
+            animation: blink 1.5s infinite;
+        }
+
+        .status-dot.active {
+            background: #4ade80;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .control-btn.primary {
+            background: linear-gradient(145deg, #f4a261, #e76f51);
+        }
+
+        .control-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: #333;
+        }
+
+        .control-btn.primary svg {
+            fill: white;
+        }
+
+        /* Speech Bubble */
+        .speech-bubble {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -150%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 20px;
+            max-width: 300px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 100;
+        }
+
+        .speech-bubble.show {
+            opacity: 1;
+            transform: translate(-50%, -120%);
+        }
+
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 15px solid transparent;
+            border-top-color: white;
+            border-bottom: 0;
+        }
+
+        .speech-bubble p {
+            color: #333;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .speech-bubble .brand {
+            color: #f4a261;
+            font-weight: 700;
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 25px 25px 0 0;
+            padding: 30px;
+            transform: translateY(100%);
+            transition: transform 0.4s ease;
+            z-index: 200;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .info-panel.show {
+            transform: translateY(0);
+        }
+
+        .info-panel h2 {
+            color: #333;
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-panel h2 img {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+
+        .info-item:hover {
+            background: #eee;
+            transform: translateX(5px);
+        }
+
+        .info-icon {
+            width: 45px;
+            height: 45px;
+            background: linear-gradient(145deg, #f4a261, #e76f51);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .info-text h3 {
+            font-size: 0.95rem;
+            margin-bottom: 3px;
+        }
+
+        .info-text p {
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        .close-panel {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #999;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+
+        /* Instruction Hint */
+        .instruction-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .instruction-hint.show {
+            opacity: 1;
+        }
+
+        .scan-icon {
+            width: 150px;
+            height: 150px;
+            border: 3px dashed rgba(255,255,255,0.5);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scan-pulse 2s infinite;
+        }
+
+        @keyframes scan-pulse {
+            0%, 100% { border-color: rgba(255,255,255,0.5); }
+            50% { border-color: rgba(244, 162, 97, 0.8); }
+        }
+
+        .scan-icon svg {
+            width: 60px;
+            height: 60px;
+            fill: white;
+            opacity: 0.8;
+        }
+
+        .instruction-hint p {
+            font-size: 1rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-avatar">
+            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <div class="loading-text">Preparando Avatar AR...</div>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header ui-overlay">
+        <div class="logo-badge">
+            <img src="assets/logoneumor.jpeg" alt="NS">
+            <span>NeumorStudio</span>
+        </div>
+        <button class="close-btn" onclick="window.location.href='index.html'">&times;</button>
+    </div>
+
+    <!-- Instruction Hint -->
+    <div class="instruction-hint" id="instructionHint">
+        <div class="scan-icon">
+            <svg viewBox="0 0 24 24"><path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zm0 3H19V19h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/></svg>
+        </div>
+        <p>Apunta al marcador NeumorStudio</p>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Buscando marcador...</span>
+    </div>
+
+    <!-- Speech Bubble -->
+    <div class="speech-bubble" id="speechBubble">
+        <p id="speechText"></p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="control-btn" onclick="toggleInfo()" id="infoBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        </button>
+        <button class="control-btn primary" onclick="triggerGreeting()" id="playBtn">
+            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="control-btn" onclick="toggleAudio()" id="audioBtn">
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        </button>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+        <button class="close-panel" onclick="toggleInfo()">&times;</button>
+        <h2>
+            <img src="assets/logoneumor.jpeg" alt="NS">
+            NeumorStudio
+        </h2>
+
+        <a href="https://neumorstudio.com" target="_blank" class="info-item">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+            </div>
+            <div class="info-text">
+                <h3>Sitio Web</h3>
+                <p>neumorstudio.com</p>
+            </div>
+        </a>
+
+        <a href="mailto:neumorstudio@gmail.com" class="info-item">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            </div>
+            <div class="info-text">
+                <h3>Email</h3>
+                <p>neumorstudio@gmail.com</p>
+            </div>
+        </a>
+
+        <a href="https://instagram.com/neumorstudio" target="_blank" class="info-item">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2m-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.39 5.61 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.61 18.39 4 16.4 4H7.6m9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z"/></svg>
+            </div>
+            <div class="info-text">
+                <h3>Instagram</h3>
+                <p>@neumorstudio</p>
+            </div>
+        </a>
+
+        <a href="https://facebook.com/neumorstudio" target="_blank" class="info-item">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2.04C6.5 2.04 2 6.53 2 12.06C2 17.06 5.66 21.21 10.44 21.96V14.96H7.9V12.06H10.44V9.85C10.44 7.34 11.93 5.96 14.22 5.96C15.31 5.96 16.45 6.15 16.45 6.15V8.62H15.19C13.95 8.62 13.56 9.39 13.56 10.18V12.06H16.34L15.89 14.96H13.56V21.96A10 10 0 0 0 22 12.06C22 6.53 17.5 2.04 12 2.04Z"/></svg>
+            </div>
+            <div class="info-text">
+                <h3>Facebook</h3>
+                <p>/neumorstudio</p>
+            </div>
+        </a>
+
+        <a href="https://tiktok.com/@neumorstudio" target="_blank" class="info-item">
+            <div class="info-icon">
+                <svg viewBox="0 0 24 24"><path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+            </div>
+            <div class="info-text">
+                <h3>TikTok</h3>
+                <p>@neumorstudio</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- A-Frame AR Scene -->
+    <a-scene
+        vr-mode-ui="enabled: false"
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+        renderer="antialias: true; alpha: true; precision: medium;"
+        embedded
+    >
+        <a-assets>
+            <a-asset-item id="avatarModel" src="assets/avatar/avatar.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- NFT Marker -->
+        <a-nft
+            type="nft"
+            url="nft-marker/neumorstudio-marker"
+            smooth="true"
+            smoothCount="10"
+            smoothTolerance="0.01"
+            smoothThreshold="5"
+            id="nftMarker"
+        >
+            <!-- Avatar 3D -->
+            <a-entity
+                id="avatarEntity"
+                gltf-model="#avatarModel"
+                scale="50 50 50"
+                position="0 0 0"
+                rotation="0 0 0"
+                animation-mixer="clip: *; loop: repeat"
+                visible="false"
+            ></a-entity>
+
+            <!-- Fallback: Animated Character Placeholder -->
+            <a-entity id="avatarPlaceholder" visible="true">
+                <!-- Body -->
+                <a-cylinder
+                    position="0 80 0"
+                    radius="30"
+                    height="80"
+                    color="#f4a261"
+                    animation="property: position; to: 0 85 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+                ></a-cylinder>
+
+                <!-- Head -->
+                <a-sphere
+                    position="0 150 0"
+                    radius="25"
+                    color="#ffd6a5"
+                    animation="property: position; to: 0 155 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+                ></a-sphere>
+
+                <!-- Eyes -->
+                <a-sphere position="-10 155 20" radius="5" color="#333"></a-sphere>
+                <a-sphere position="10 155 20" radius="5" color="#333"></a-sphere>
+
+                <!-- Smile -->
+                <a-torus
+                    position="0 145 22"
+                    radius="8"
+                    radius-tubular="2"
+                    arc="180"
+                    rotation="180 0 0"
+                    color="#e76f51"
+                ></a-torus>
+
+                <!-- Arms -->
+                <a-cylinder
+                    position="-45 100 0"
+                    radius="8"
+                    height="50"
+                    color="#f4a261"
+                    rotation="0 0 -30"
+                    animation="property: rotation; to: 0 0 -60; dur: 500; easing: easeInOutQuad; startEvents: wave"
+                ></a-cylinder>
+                <a-cylinder
+                    position="45 100 0"
+                    radius="8"
+                    height="50"
+                    color="#f4a261"
+                    rotation="0 0 30"
+                    id="rightArm"
+                    animation__wave="property: rotation; to: 0 0 120; dur: 300; easing: easeOutQuad; startEvents: wave"
+                    animation__back="property: rotation; to: 0 0 30; dur: 300; easing: easeInQuad; startEvents: waveBack; delay: 300"
+                ></a-cylinder>
+
+                <!-- Hands -->
+                <a-sphere position="-55 75 0" radius="10" color="#ffd6a5"></a-sphere>
+                <a-sphere
+                    position="55 75 0"
+                    radius="10"
+                    color="#ffd6a5"
+                    id="rightHand"
+                ></a-sphere>
+
+                <!-- Name Tag -->
+                <a-plane
+                    position="0 200 0"
+                    width="120"
+                    height="30"
+                    color="#333"
+                    opacity="0.8"
+                    animation="property: position; to: 0 205 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+                >
+                    <a-text
+                        value="NeumorStudio"
+                        align="center"
+                        color="white"
+                        width="100"
+                        position="0 0 0.1"
+                    ></a-text>
+                </a-plane>
+            </a-entity>
+
+            <!-- Logo floating -->
+            <a-image
+                src="assets/logoneumor.jpeg"
+                width="40"
+                height="40"
+                position="80 150 0"
+                rotation="0 0 0"
+                animation="property: rotation; to: 0 360 0; dur: 8000; easing: linear; loop: true"
+            ></a-image>
+
+        </a-nft>
+
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+        // State
+        let isMarkerFound = false;
+        let isAudioEnabled = true;
+        let isPanelOpen = false;
+        let greetingIndex = 0;
+
+        // Greetings sequence
+        const greetings = [
+            '¡Hola! Soy el asistente virtual de <span class="brand">NeumorStudio</span>',
+            'Creamos experiencias digitales únicas con diseño neumórfico',
+            'Toca el botón de info para conocer más sobre nosotros',
+            '¡Síguenos en redes sociales!'
+        ];
+
+        // Elements
+        const loadingScreen = document.getElementById('loadingScreen');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const speechBubble = document.getElementById('speechBubble');
+        const speechText = document.getElementById('speechText');
+        const instructionHint = document.getElementById('instructionHint');
+        const infoPanel = document.getElementById('infoPanel');
+
+        // Hide loading after scene loads
+        document.querySelector('a-scene').addEventListener('loaded', () => {
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                instructionHint.classList.add('show');
+            }, 2500);
+        });
+
+        // NFT Marker events
+        const nftMarker = document.getElementById('nftMarker');
+
+        nftMarker.addEventListener('markerFound', () => {
+            isMarkerFound = true;
+            statusDot.classList.add('active');
+            statusText.textContent = 'Avatar encontrado';
+            instructionHint.classList.remove('show');
+
+            // Auto greeting on first detection
+            setTimeout(() => {
+                triggerGreeting();
+            }, 1000);
+        });
+
+        nftMarker.addEventListener('markerLost', () => {
+            isMarkerFound = false;
+            statusDot.classList.remove('active');
+            statusText.textContent = 'Buscando marcador...';
+            speechBubble.classList.remove('show');
+            instructionHint.classList.add('show');
+        });
+
+        // Trigger greeting animation
+        function triggerGreeting() {
+            if (!isMarkerFound) return;
+
+            // Wave animation
+            const rightArm = document.getElementById('rightArm');
+            if (rightArm) {
+                rightArm.emit('wave');
+                setTimeout(() => rightArm.emit('waveBack'), 600);
+            }
+
+            // Show speech bubble
+            speechText.innerHTML = greetings[greetingIndex];
+            speechBubble.classList.add('show');
+
+            // Speak if audio enabled
+            if (isAudioEnabled && 'speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(
+                    greetings[greetingIndex].replace(/<[^>]*>/g, '')
+                );
+                utterance.lang = 'es-ES';
+                utterance.rate = 0.9;
+                speechSynthesis.speak(utterance);
+            }
+
+            // Next greeting
+            greetingIndex = (greetingIndex + 1) % greetings.length;
+
+            // Hide bubble after delay
+            setTimeout(() => {
+                speechBubble.classList.remove('show');
+            }, 4000);
+        }
+
+        // Toggle info panel
+        function toggleInfo() {
+            isPanelOpen = !isPanelOpen;
+            infoPanel.classList.toggle('show', isPanelOpen);
+        }
+
+        // Toggle audio
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const audioBtn = document.getElementById('audioBtn');
+            audioBtn.querySelector('svg').innerHTML = isAudioEnabled
+                ? '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>'
+                : '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+
+            if (!isAudioEnabled) {
+                speechSynthesis.cancel();
+            }
+        }
+
+        // Close panel on outside click
+        document.addEventListener('click', (e) => {
+            if (isPanelOpen && !infoPanel.contains(e.target) && e.target.id !== 'infoBtn') {
+                toggleInfo();
+            }
+        });
+    </script>
+</body>
+</html>
