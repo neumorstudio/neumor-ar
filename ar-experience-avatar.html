@@ -527,7 +527,8 @@
         embedded
     >
         <a-assets>
-            <a-asset-item id="avatarModel" src="assets/avatar/avatar.glb"></a-asset-item>
+            <img id="ceoMariImg" src="assets/CEOMARI.webp">
+            <img id="logoImg" src="assets/logoneumor.jpeg">
         </a-assets>
 
         <!-- Hiro Marker -->
@@ -539,105 +540,63 @@
             smoothThreshold="5"
             id="hiroMarker"
         >
-            <!-- Avatar 3D -->
-            <a-entity
-                id="avatarEntity"
-                gltf-model="#avatarModel"
-                scale="0.5 0.5 0.5"
-                position="0 0 0"
-                rotation="0 0 0"
-                animation-mixer="clip: *; loop: repeat"
-                visible="false"
-            ></a-entity>
+            <!-- CEO Mari Sticker 3D -->
+            <a-entity id="ceoMariContainer" position="0 0.8 0">
+                <!-- Sticker principal flotante -->
+                <a-image
+                    id="ceoMariSticker"
+                    src="assets/CEOMARI.webp"
+                    width="1.2"
+                    height="1.2"
+                    position="0 0 0"
+                    look-at="[camera]"
+                    animation="property: position; to: 0 0.1 0; dur: 1500; easing: easeInOutQuad; loop: true; dir: alternate"
+                    animation__scale="property: scale; from: 0.8 0.8 0.8; to: 1 1 1; dur: 500; easing: easeOutBack; startEvents: appear"
+                ></a-image>
 
-            <!-- Fallback: Animated Character Placeholder -->
-            <a-entity id="avatarPlaceholder" visible="true" scale="0.01 0.01 0.01">
-                <!-- Body -->
-                <a-cylinder
-                    position="0 80 0"
-                    radius="30"
-                    height="80"
+                <!-- Efecto de brillo/glow detrás -->
+                <a-circle
+                    position="0 0 -0.05"
+                    radius="0.7"
                     color="#f4a261"
-                    animation="property: position; to: 0 85 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
-                ></a-cylinder>
+                    opacity="0.3"
+                    animation="property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+                ></a-circle>
 
-                <!-- Head -->
-                <a-sphere
-                    position="0 150 0"
-                    radius="25"
-                    color="#ffd6a5"
-                    animation="property: position; to: 0 155 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
-                ></a-sphere>
+                <!-- Partículas decorativas -->
+                <a-circle position="0.6 0.4 0" radius="0.05" color="#f4a261" opacity="0.8"
+                    animation="property: position; to: 0.7 0.5 0; dur: 2000; loop: true; dir: alternate"></a-circle>
+                <a-circle position="-0.5 0.3 0" radius="0.04" color="#e76f51" opacity="0.8"
+                    animation="property: position; to: -0.6 0.4 0; dur: 1800; loop: true; dir: alternate"></a-circle>
+                <a-circle position="0.4 -0.3 0" radius="0.03" color="#ffd6a5" opacity="0.8"
+                    animation="property: position; to: 0.5 -0.2 0; dur: 2200; loop: true; dir: alternate"></a-circle>
 
-                <!-- Eyes -->
-                <a-sphere position="-10 155 20" radius="5" color="#333"></a-sphere>
-                <a-sphere position="10 155 20" radius="5" color="#333"></a-sphere>
-
-                <!-- Smile -->
-                <a-torus
-                    position="0 145 22"
-                    radius="8"
-                    radius-tubular="2"
-                    arc="180"
-                    rotation="180 0 0"
-                    color="#e76f51"
-                ></a-torus>
-
-                <!-- Arms -->
-                <a-cylinder
-                    position="-45 100 0"
-                    radius="8"
-                    height="50"
-                    color="#f4a261"
-                    rotation="0 0 -30"
-                    animation="property: rotation; to: 0 0 -60; dur: 500; easing: easeInOutQuad; startEvents: wave"
-                ></a-cylinder>
-                <a-cylinder
-                    position="45 100 0"
-                    radius="8"
-                    height="50"
-                    color="#f4a261"
-                    rotation="0 0 30"
-                    id="rightArm"
-                    animation__wave="property: rotation; to: 0 0 120; dur: 300; easing: easeOutQuad; startEvents: wave"
-                    animation__back="property: rotation; to: 0 0 30; dur: 300; easing: easeInQuad; startEvents: waveBack; delay: 300"
-                ></a-cylinder>
-
-                <!-- Hands -->
-                <a-sphere position="-55 75 0" radius="10" color="#ffd6a5"></a-sphere>
-                <a-sphere
-                    position="55 75 0"
-                    radius="10"
-                    color="#ffd6a5"
-                    id="rightHand"
-                ></a-sphere>
-
-                <!-- Name Tag -->
+                <!-- Nombre debajo -->
                 <a-plane
-                    position="0 200 0"
-                    width="120"
-                    height="30"
+                    position="0 -0.8 0"
+                    width="1.4"
+                    height="0.25"
                     color="#333"
-                    opacity="0.8"
-                    animation="property: position; to: 0 205 0; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
+                    opacity="0.85"
+                    radius="0.05"
                 >
                     <a-text
                         value="NeumorStudio"
                         align="center"
                         color="white"
-                        width="100"
-                        position="0 0 0.1"
+                        width="2.5"
+                        position="0 0 0.01"
                     ></a-text>
                 </a-plane>
             </a-entity>
 
-            <!-- Logo floating -->
+            <!-- Logo floating al lado -->
             <a-image
                 src="assets/logoneumor.jpeg"
-                width="0.4"
-                height="0.4"
-                position="0.8 1.5 0"
-                rotation="0 0 0"
+                width="0.35"
+                height="0.35"
+                position="0.9 1.2 0"
+                look-at="[camera]"
                 animation="property: rotation; to: 0 360 0; dur: 8000; easing: linear; loop: true"
             ></a-image>
 
@@ -705,11 +664,10 @@
         function triggerGreeting() {
             if (!isMarkerFound) return;
 
-            // Wave animation
-            const rightArm = document.getElementById('rightArm');
-            if (rightArm) {
-                rightArm.emit('wave');
-                setTimeout(() => rightArm.emit('waveBack'), 600);
+            // Sticker animation
+            const sticker = document.getElementById('ceoMariSticker');
+            if (sticker) {
+                sticker.emit('appear');
             }
 
             // Show speech bubble
